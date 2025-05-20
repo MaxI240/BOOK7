@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Diary</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Caveat', cursive;
+            /* Changed overflow to auto for scrolling on small screens if content overflows */
+            overflow: auto; 
+            background-color: #f0f5ff;
+            /* Use 100svh for more reliable viewport height across mobile browsers */
+            min-height: 100svh; 
+            display: flex;
+            flex-direction: column; /* Allow content to stack vertically */
+            justify-content: center;
+            align-items: center;
+            perspective: 1500px;
+            padding: 20px 10px; /* Add some padding around the book */
+        }
+        
+        .book {
+            /* Use 95% of viewport width for better filling, and calc for height based on aspect ratio */
+            width: 95vw; 
+            max-width: 800px;
+            /* Maintain aspect ratio (e.g., 4:3 for height relative to width) */
+            height: calc(95vw * 1.33); 
+            max-height: 800px; /* Still limit max height */
+            position: relative;
+            transform-style: preserve-3d;
+            perspective: 1500px;
+            margin-bottom: 80px; /* Give space for navigation buttons */
+        }
+
+        /* Adjust book height for very tall screens if needed, or if aspect ratio results in too much height */
+        @media (min-aspect-ratio: 1/1.5) { /* Example: if viewport is taller than 1:1.5 ratio */
+            .book {
+                height: 90vh; /* Prioritize height on tall screens */
+                width: calc(90vh / 1.33); /* Adjust width to maintain aspect ratio */
+            }
+        }
+        
+        .page {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            transform-origin: left center;
+            transform-style: preserve-3d;
+            transition: transform 1.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+            cursor: pointer;
+            z-index: 1; /* Initial z-index */
+            background: linear-gradient(to right, #e6f0ff, #ffffff);
+            border-radius: 0 10px 10px 0;
+            box-shadow: 
+                inset 0 0 5px rgba(0, 0, 0, 0.1),
+                0 5px 15px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .page:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%234a7bca' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+        
+        .page:after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 10%);
+            pointer-events: none;
+        }
+        
+        .page-content {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            /* Use percentage padding for responsiveness */
+            padding: 8% 10%; 
+            color: #2c5697;
+            /* Use fluid font sizes */
+            font-size: clamp(14px, 2.5vw, 20px); 
+            line-height: 1.6;
+            overflow: auto; /* Allow content to scroll within the page if it exceeds bounds */
+            backface-visibility: hidden;
+        }
+        
+        .page-content h2 {
+            /* Use fluid font sizes */
+            font-size: clamp(24px, 4vw, 36px); 
+            margin-bottom: 20px;
+            color: #1a3c70;
+            text-align: center;
+            text-decoration: underline;
+        }
+        
+        .page-content p {
+            margin-bottom: 15px;
+            text-indent: 30px;
+        }
+        
+        .page-content .date {
+            text-align: right;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #3a66a7;
+        }
+        
+        .page-back {
+            transform: rotateY(180deg);
+            background: linear-gradient(to left, #e6f0ff, #ffffff);
+            border-radius: 10px 0 0 10px;
+        }
+        
+        .page.flipped {
+            transform: rotateY(-180deg);
+        }
+        
+        .page-number {
+            position: absolute;
+            bottom: 20px;
+            /* Use fluid font sizes */
+            font-size: clamp(12px, 2vw, 16px); 
+            color: #5d82b3;
+        }
+        
+        /* Apply to the .page-content div itself */
+        .page-content:not(.page-back) .page-number {
+            right: 20px;
+        }
+        
+        .page-content.page-back .page-number {
+            left: 20px;
+        }
+        
+        .navigation {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+            width: 90%; /* Make navigation buttons responsive */
+            justify-content: center;
+        }
+        
+        .nav-btn {
+            background-color: #4a7bca;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Caveat', cursive;
+            /* Use fluid font sizes */
+            font-size: clamp(16px, 3vw, 20px); 
+            transition: background-color 0.3s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            flex: 1; /* Allow buttons to grow and shrink */
+            max-width: 150px; /* Limit max width for larger screens */
+        }
+        
+        .nav-btn:hover {
+            background-color: #3a66a7;
+        }
+        
+        .nav-btn:disabled {
+            background-color: #a5b9db;
+            cursor: not-allowed;
+        }
+        
+        .page-curl {
+            position: absolute;
+            width: 0;
+            height: 0;
+            top: 0;
+            right: 0;
+            border-style: solid;
+            border-width: 0 50px 50px 0;
+            border-color: transparent #d6e4f7 transparent transparent;
+            box-shadow: -2px 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease-in-out;
+        }
+        
+        .cover {
+            background: linear-gradient(135deg, #4a7bca, #1a3c70);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 100; /* Ensure cover is on top initially */
+        }
+        
+        .cover h1 {
+            /* Use fluid font sizes */
+            font-size: clamp(32px, 6vw, 48px); 
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .cover p {
+            /* Use fluid font sizes */
+            font-size: clamp(16px, 3vw, 24px); 
+            max-width: 80%;
+        }
+        
+        .wavy-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M21.184 20c.357-.13.72-.264 1.088-.402l1.768-.661C33.64 15.347 39.647 14 50 14c10.271 0 15.362 1.222 24.629 4.928.955.383 1.869.74 2.75 1.072h6.225c-2.51-.73-5.139-1.691-8.233-2.928C65.888 13.278 60.562 12 50 12c-10.626 0-16.855 1.397-26.66 5.063l-1.767.662c-2.475.923-4.66 1.674-6.724 2.275h6.335zm0-20C13.258 2.892 8.077 4 0 4V2c5.744 0 9.951-.574 14.85-2h6.334zM77.38 0C85.239 2.966 90.502 4 100 4V2c-6.842 0-11.386-.542-16.396-2h-6.225zM0 14c8.44 0 13.718-1.21 22.272-4.402l1.768-.661C33.64 5.347 39.647 4 50 4c10.271 0 15.362 1.222 24.629 4.928C84.112 12.722 89.438 14 100 14v-2c-10.271 0-15.362-1.222-24.629-4.928C65.888 3.278 60.562 2 50 2 39.374 2 33.145 3.397 23.34 7.063l-1.767.662C13.223 10.84 8.163 12 0 12v2z' fill='%234a7bca' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="book" id="book">
+        <div class="page cover" id="cover">
+            <h1>My Digital Diary</h1>
+            <p>Personal thoughts and reflections</p>
+        </div>
+        
+        </div>
+    
+    <div class="navigation">
+        <button class="nav-btn" id="prev-btn" disabled>Previous</button>
+        <button class="nav-btn" id="next-btn">Next</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const book = document.getElementById('book');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const cover = document.getElementById('cover');
+            
+            // Diary content for each page
+            const diaryEntries = [
+                {
+                    date: "January 15, 2025",
+                    title: "New Beginnings",
+                    content: "Today marks the start of something new. I've decided to keep this digital diary to document my thoughts and experiences. The world seems full of possibilities, and I'm excited to see where this journey takes me. Sometimes I wonder if I'm making the right choices, but I guess that's part of the adventure."
+                },
+                {
+                    date: "February 3, 2025",
+                    title: "Winter Reflections",
+                    content: "The snow fell gently outside my window today. I spent hours just watching the flakes dance in the wind, each one unique yet part of something greater. It reminded me of how we're all connected in this vast universe. I made hot chocolate and wrapped myself in a blanket, feeling grateful for these quiet moments of peace."
+                },
+                {
+                    date: "March 21, 2025",
+                    title: "Spring Awakening",
+                    content: "The first day of spring brought with it a sense of renewal. I noticed tiny buds on the trees and the air felt different somehow. I took a long walk in the park and felt my spirits lift with each step. It's amazing how nature's cycles mirror our own lives - periods of dormancy followed by growth and rebirth."
+                },
+                {
+                    date: "April 17, 2025",
+                    title: "Unexpected Friendship",
+                    content: "I met someone interesting today. We started talking at the coffee shop when we both reached for the same book on the community shelf. What followed was hours of conversation that felt like minutes. It's rare to connect with someone so quickly, to feel understood without explanation. I hope this is the beginning of a meaningful friendship."
+                },
+                {
+                    date: "May 30, 2025",
+                    title: "Challenges and Growth",
+                    content: "This month has tested me in ways I didn't expect. Work has been demanding, and I've had to confront some difficult truths about myself. But through the struggle, I'm learning resilience. Each obstacle overcome makes the next one less daunting. I'm trying to embrace the discomfort as a sign of growth rather than something to avoid."
+                },
+                {
+                    date: "June 21, 2025",
+                    title: "Summer Solstice",
+                    content: "The longest day of the year. I woke up early to watch the sunrise and stayed up late to see it set. There's something magical about these extended hours of light. I spent the day outdoors, soaking in the warmth and energy. I made a list of things I want to accomplish before autumn arrives. Time feels both abundant and fleeting."
+                },
+                {
+                    date: "July 4, 2025",
+                    title: "Independence Reflections",
+                    content: "Watched fireworks tonight from the rooftop. As colors exploded across the sky, I thought about freedom and what it truly means. Beyond the celebrations and patriotism, there's a personal freedom we all seek - to be authentically ourselves, to pursue our dreams without fear. I'm working on breaking free from self-imposed limitations."
+                },
+                {
+                    date: "August 12, 2025",
+                    title: "Ocean Memories",
+                    content: "Spent the week at the beach. There's something about the vastness of the ocean that puts everything into perspective. My problems seem smaller against the endless horizon. I collected shells along the shore and listened to the rhythmic crashing of waves. The salt air cleared my mind, and I feel renewed. I wish I could bottle this feeling for darker days."
+                },
+                {
+                    date: "September 8, 2025",
+                    title: "Autumn Transitions",
+                    content: "The leaves are beginning to change, hints of gold and crimson appearing among the green. I've always loved this time of year - the crisp air, the cozy sweaters, the sense of transition. I'm making changes too, letting go of what no longer serves me and creating space for new possibilities. Change can be beautiful if we allow it to be."
+                },
+                {
+                    date: "October 31, 2025",
+                    title: "Reflections and Shadows",
+                    content: "Halloween night. As children in costumes roam the streets, I find myself thinking about the masks we all wear. The personas we present to the world versus who we truly are in private moments. I'm trying to align these versions of myself, to live more authentically. Perhaps that's the greatest treat we can give ourselves - permission to be real."
+                }
+            ];
+            
+            // Create pages
+            function createPages() {
+                // The cover already exists, so we start page numbering from 1 for diary entries
+                // And we will consider the cover as page 0 for navigation logic
+                
+                // Add an ID to the cover page for easier reference
+                cover.id = 'page-0'; 
+
+                for (let i = 0; i < diaryEntries.length; i++) {
+                    const entry = diaryEntries[i];
+                    
+                    // Create page element
+                    const page = document.createElement('div');
+                    page.className = 'page';
+                    // Pages are numbered from 1, so the cover is page 0.
+                    // Diary entry '0' becomes page '1', '1' becomes page '2', etc.
+                    page.id = `page-${i + 1}`; 
+                    
+                    // Front content
+                    const frontContent = document.createElement('div');
+                    frontContent.className = 'page-content page-front'; // Added page-front class for specific styling if needed
+                    
+                    const date = document.createElement('div');
+                    date.className = 'date';
+                    date.textContent = entry.date;
+                    frontContent.appendChild(date);
+                    
+                    const title = document.createElement('h2');
+                    title.textContent = entry.title;
+                    frontContent.appendChild(title);
+                    
+                    const content = document.createElement('p');
+                    content.textContent = entry.content;
+                    frontContent.appendChild(content);
+                    
+                    const frontPageNumber = document.createElement('div');
+                    frontPageNumber.className = 'page-number';
+                    frontPageNumber.textContent = (i * 2) + 1; // Odd numbers for front pages
+                    frontContent.appendChild(frontPageNumber);
+                    
+                    const pageCurl = document.createElement('div');
+                    pageCurl.className = 'page-curl';
+                    frontContent.appendChild(pageCurl);
+                    
+                    const wavyEffectFront = document.createElement('div'); // Unique variable name
+                    wavyEffectFront.className = 'wavy-effect';
+                    frontContent.appendChild(wavyEffectFront);
+                    
+                    page.appendChild(frontContent);
+                    
+                    // Back content (only if there's a next entry to display on the back)
+                    if (i < diaryEntries.length - 1) {
+                        const nextEntry = diaryEntries[i + 1];
+
+                        const backPageContainer = document.createElement('div'); // Renamed variable
+                        backPageContainer.className = 'page-content page-back';
+                        
+                        const backDate = document.createElement('div');
+                        backDate.className = 'date';
+                        backDate.textContent = nextEntry.date;
+                        backPageContainer.appendChild(backDate);
+                        
+                        const backTitle = document.createElement('h2');
+                        backTitle.textContent = nextEntry.title;
+                        backPageContainer.appendChild(backTitle);
+                        
+                        const backParagraph = document.createElement('p'); // Renamed variable
+                        backParagraph.textContent = nextEntry.content;
+                        backPageContainer.appendChild(backParagraph);
+                        
+                        const backPageNumber = document.createElement('div');
+                        backPageNumber.className = 'page-number';
+                        backPageNumber.textContent = (i * 2) + 2; // Even numbers for back pages
+                        backPageContainer.appendChild(backPageNumber);
+                        
+                        const wavyEffectBack = document.createElement('div'); // Unique variable name
+                        wavyEffectBack.className = 'wavy-effect';
+                        backPageContainer.appendChild(wavyEffectBack);
+                        
+                        page.appendChild(backPageContainer);
+                    }
+                    
+                    // Add page to book
+                    book.appendChild(page);
+                    
+                    // Add click event to flip page
+                    page.addEventListener('click', function() {
+                        flipPage(this);
+                    });
+                }
+            }
+            
+            // Initialize pages
+            createPages();
+            
+            // Current page tracking (0 is cover, 1 is first diary page, etc.)
+            let currentPage = 0; 
+            const totalPages = diaryEntries.length; // Number of diary entries (pages to flip through)
+            
+            // Flip page function
+            function flipPage(page) {
+                if (page.classList.contains('flipped')) {
+                    page.classList.remove('flipped');
+                    currentPage--;
+                } else {
+                    page.classList.add('flipped');
+                    currentPage++;
+                }
+                updateButtons();
+                updatePageVisuals(); // Call this after each flip to update z-index and shadows
+            }
+            
+            // Update navigation buttons
+            function updateButtons() {
+                // Previous button is disabled if on the cover (currentPage 0)
+                prevBtn.disabled = currentPage === 0;
+                // Next button is disabled if all diary entries are flipped
+                nextBtn.disabled = currentPage === totalPages;
+            }
+            
+            // Navigation button events
+            prevBtn.addEventListener('click', function() {
+                if (currentPage > 0) {
+                    const pageToUnflip = document.getElementById(`page-${currentPage}`);
+                    pageToUnflip.classList.remove('flipped');
+                    currentPage--;
+                    updateButtons();
+                    updatePageVisuals();
+                }
+            });
+            
+            nextBtn.addEventListener('click', function() {
+                if (currentPage <= totalPages) { // Allow flipping to the last page (total number of entries)
+                    const pageToFlip = document.getElementById(`page-${currentPage}`);
+                    pageToFlip.classList.add('flipped');
+                    currentPage++;
+                    updateButtons();
+                    updatePageVisuals();
+                }
+            });
+            
+            // Add 3D hover effect to pages (This can be optimized as the existing CSS is generally good)
+            const allPages = document.querySelectorAll('.page');
+            allPages.forEach(page => {
+                page.addEventListener('mousemove', function(e) {
+                    // Only apply 3D effect if the page is not flipped and is the current page or the one before
+                    // This prevents weird rotations on pages further down
+                    const pageId = parseInt(page.id.replace('page-', ''));
+                    if (!page.classList.contains('flipped') && pageId === currentPage + 1) {
+                        const rect = page.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const y = e.clientY - rect.top;
+                        
+                        const centerX = rect.width / 2;
+                        const centerY = rect.height / 2;
+                        
+                        const deltaX = (x - centerX) / centerX;
+                        const deltaY = (y - centerY) / centerY;
+                        
+                        page.style.transform = `rotateY(${deltaX * 5}deg) rotateX(${-deltaY * 5}deg)`;
+                    }
+                });
+                
+                page.addEventListener('mouseleave', function() {
+                    if (!page.classList.contains('flipped')) {
+                        page.style.transform = ''; // Reset to default
+                    } else {
+                        // Keep flipped state transform
+                        page.style.transform = 'rotateY(-180deg)';
+                    }
+                });
+            });
+            
+            // Update z-index and shadows based on page position
+            function updatePageVisuals() {
+                const pages = document.querySelectorAll('.page');
+                pages.forEach((page, index) => {
+                    const isFlipped = page.classList.contains('flipped');
+                    // Index + 1 because the cover is page 0, and diary entries start from index 0 mapping to page-1.
+                    const pageNumber = index; 
+
+                    // For unflipped pages, higher page numbers should be "behind" lower page numbers
+                    // For flipped pages, they move to the "back" of the book
+                    if (isFlipped) {
+                        page.style.zIndex = pageNumber; // Flipped pages get a lower z-index
+                    } else {
+                        page.style.zIndex = totalPages - pageNumber; // Unflipped pages get higher z-index, so they appear on top
+                    }
+                    
+                    // Add shadow based on position (more subtle for pages further back)
+                    const shadowIntensity = 0.1 + (Math.abs(currentPage - pageNumber) * 0.02);
+                    page.style.boxShadow = `inset 0 0 5px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, ${shadowIntensity})`;
+                });
+            }
+            
+            // Initial visual update
+            updatePageVisuals();
+            updateButtons(); // Set initial button states
+            
+            // Add keyboard navigation
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    if (!prevBtn.disabled) {
+                        prevBtn.click();
+                    }
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    if (!nextBtn.disabled) {
+                        nextBtn.click();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
